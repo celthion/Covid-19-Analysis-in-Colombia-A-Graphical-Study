@@ -1,6 +1,8 @@
 # Covid-19 Analysis in Colombia: A Graphical Study of Relevant Coefficients and Implications of Fiscal Deficit on Municipal Pandemic Management
 
-
+---
+Autor: David Cardona Duque
+---
 ## Introducción
 El presente trabajo desarrolla un análisis gráfico de coeficientes relevantes respecto a los contagios por 100000 habitantes en Colombia delimitado por variables de población, edad, regiones y periodos de tiempo, que servirán como materia prima para generar un acercamiento al análisis respecto a los efectos del déficit fiscal y el posible manejo de la pandemia por parte de los municipios teniendo en cuenta el aumento o no de contagios en las respectivas regiones; en otro punto los contagios diferenciados por sexos y edades en los periodos de tiempo donde se presentaran planteamientos con base en implicaciones diferenciadas con base en el género como las actividades y edades productivas, teniendo por ultimo en cuenta la diferencia de contagio según los periodos de tiempo que permiten un contraste entre la etapa de implementación de medidas restrictivas de aislamiento preventivo y su finalización.
 
