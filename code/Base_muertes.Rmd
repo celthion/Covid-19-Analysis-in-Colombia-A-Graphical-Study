@@ -1,0 +1,203 @@
+---
+title: "Trabajo individual"
+author: "David Cardona Duque"
+date: "8/6/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE,
+                      message = FALSE,
+                      warning = FALSE)
+```
+
+```{r}
+library(readxl)
+library(tidyverse)
+library(scales)
+```
+
+
+```{r}
+##Lectura Base de datos Covid, conversion a formato Rdata
+covid_19 <- read.csv("Casos_positivos_de_COVID-19_en_Colombia.csv",
+                     encoding = "UTF-8")
+
+save(covid_19, file = "covid_19.RData")
+```
+
+```{r}
+## Lectura base de datos poblacion
+pobla_munc <- read_excel("anexo-proyecciones-poblacion-Municipal_2018-2026.xlsx",
+                         skip = 11)
+
+```
+
+```{r}
+##Seleccion variables de interes en base de poblacion
+pobla_munc1 <- pobla_munc %>% 
+  select(-c(Total, `Total Hombres`, `Total Mujeres`))
+```
+
+```{r}
+##Adecuacion de la base de datos 
+pobla_munc_largo <- pobla_munc1 %>% 
+  pivot_longer(Hombres_0:`Total_100 y más`,
+               names_to = "Clase_genero",
+               values_to = "poblacion") %>% 
+  separate(Clase_genero, into = c("genero", "edad"), sep = "_")
+```
+
+```{r}
+##Creacion de grupos de edad base de datos poblacion
+grupos_etarios <- c(seq(17,75,6), Inf)
+pobla_total_munc_2020 <- pobla_munc_largo %>% 
+  filter(`ÁREA GEOGRÁFICA` == "Total",
+         AÑO == "2020",
+         genero != "Total") %>% 
+  select(DPMP, MPIO, genero, edad, poblacion) %>% 
+  mutate(edad_R = as.integer(recode(edad, "100 y más" = "100")),
+         edad_gr_et = cut(edad_R, c(17,23,30), 
+                          include.lowest = TRUE))
+save(pobla_total_munc_2020, file = "pobla_total_munc_2020.RData")
+```
+
+```{r}
+##Creacion grupos de edad base de datos Covid
+grupos_etarios <- c(seq(17,75,6), Inf)
+covid_19 <- covid_19 %>% 
+  mutate(Fecha.de.muerte = as.POSIXct(strptime(Fecha.de.muerte,
+                                               "%d/%m/%Y %H:%M:%S")),
+         divisor = dplyr::recode(Unidad.de.medida.de.edad,
+                                 `1` = 1L,
+                                 `2` = 12L,
+                                 `3` = 365L),
+         Edad_R = Edad/divisor,
+         edad_c = as.character(cut(Edad_R, c(seq(0, 100), Inf),
+                      include.lowest = TRUE,
+                      right = FALSE, 
+                      labels = c(0:99, "100 y más"))),
+         edad_gr_et = cut(Edad_R, c(17,23,30), include.lowest = TRUE),
+         Código.DIVIPOLA.municipio = as.character(Código.DIVIPOLA.municipio),
+         Codigo_munc = Código.DIVIPOLA.municipio)
+
+```
+
+```{r}
+covid_19_decesos <- covid_19 %>% 
+  filter(!is.na(Fecha.de.muerte))
+```
+
+```{r}
+covid_19_decesos <- covid_19_decesos %>% 
+  select(ID.de.caso, Sexo, Edad_R, edad_c, edad_gr_et,
+         Codigo_munc,
+         Fecha.de.muerte)
+```
+
+```{r}
+save(covid_19_decesos, file = "covid_19_decesos.RData")
+```
+
+```{r}
+covid_19_decesos<- covid_19_decesos %>% 
+  mutate(genero = recode(Sexo, "M" = "Hombres", "F" = "Mujeres",
+                         "m" = "Hombres", "f" = "Mujeres"))
+```
+
+```{r}
+covid_19_decesos_x_mes <- covid_19_decesos %>% 
+  group_by(mes = format(Fecha.de.muerte, "%d/%m/%Y %H:%M:%S"),
+           Codigo_munc, edad_gr_et, genero) %>% 
+  summarise(muertes = n()) %>% 
+  ungroup()
+```
+
+```{r}
+pobla_total_munc_x_gr_et <- pobla_total_munc_2020 %>% 
+  group_by(edad_gr_et, DPMP, MPIO, genero) %>% 
+  summarise(poblacion = sum(poblacion))
+```
+```{r}
+pobla_total_munc_x_gr_et <- pobla_total_munc_x_gr_et %>% mutate(DPMP = as.numeric(DPMP))
+covid_19_decesos_x_mes <- covid_19_decesos_x_mes %>% mutate(Codigo_munc = as.numeric(Codigo_munc))
+```
+
+
+```{r}
+covid_19_decesos_x_mes <- covid_19_decesos_x_mes %>% 
+  left_join(pobla_total_munc_x_gr_et, by = c("genero" = "genero",
+                                     "edad_gr_et" = "edad_gr_et",
+                                     "Codigo_munc" = "DPMP"))
+```
+
+```{r}
+covid_19_decesos_x_mes <- covid_19_decesos_x_mes %>% 
+  mutate(muertes_x_cien_mil = muertes / poblacion * 100000)
+```
+
+```{r}
+save(covid_19_decesos_x_mes, file = "covid_19_decesos_x_mes.RData")
+
+```
+
+
+
+```{r}
+regiones <- read.csv("Departamentos_y_municipios_de_Colombia.csv",
+                     encoding = "UTF-8")
+regiones <- regiones %>% 
+  mutate (CÓDIGO.DANE.DEL.MUNICIPIO = as.numeric(CÓDIGO.DANE.DEL.MUNICIPIO))
+
+```
+
+```{r}
+covid_19_decesos_x_mes_regiones <- covid_19_decesos_x_mes %>% 
+  left_join(regiones, by = c(
+                             "Codigo_munc" = "CÓDIGO.DANE.DEL.MUNICIPIO"))
+
+```
+
+
+```{r}
+save(covid_19_decesos_x_mes_regiones, file="covid_19_decesos_x_mes_regiones.RData")
+```
+
+```{r}
+
+fiscal <- read_excel("fiscal-2019.xlsx",
+                         skip = 7)
+
+fiscal1 <- fiscal%>% select(c(`Código`,`Indicador de desempeño Fiscal 7/`))
+fiscal1 <- fiscal1%>% mutate(
+Código = as.numeric(Código),
+IDF = `Indicador de desempeño Fiscal 7/`)
+fiscal2 <- fiscal1%>%select(c(Código,IDF))
+
+```
+
+```{r}
+covid_19_decesos_x_mes_regiones_IDF <- covid_19_decesos_x_mes_regiones %>% 
+  left_join(fiscal2, by = c(
+                             "Codigo_munc" = "Código"))
+
+```
+
+```{r}
+covid_19_decesos_x_mes_regiones_IDF <- covid_19_decesos_x_mes_regiones_IDF %>% mutate(Codigo_munc = as.character(Codigo_munc))
+
+base_final_sin_filtrar_rangos_muertes <-covid_19_decesos_x_mes_regiones_IDF %>% select(-c(CÓDIGO.DANE.DEL.DEPARTAMENTO,MUNICIPIO))
+save(base_final_sin_filtrar_rangos_muertes, file = "base_final_sin_filtrar_muertes.RData")
+
+```
+
+```{r}
+base_final_filtrada_rangos_muertes <- filter(base_final_sin_filtrar_rangos_muertes, edad_gr_et != "NA" )
+base_final_filtrada_rangos_muertes$mes <-as.Date(base_final_filtrada_rangos_muertes$mes,"%d/%m/%Y %H:%M:%S")
+base_final_filtrada_rangos_muertes <- filter(base_final_filtrada_rangos_muertes, (mes>"2020-03-02" & mes<"2020-09-22") | mes>"2021-05-25")
+base_final_filtrada_rangos_muertes <- rename(base_final_filtrada_rangos_muertes, Fecha_de_muerte = mes  )
+
+save(base_final_filtrada_rangos_muertes, file = "base_final_filtrada_rangos_muertes.RData")
+
+```
+

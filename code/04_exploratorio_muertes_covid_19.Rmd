@@ -1,0 +1,138 @@
+---
+title: "Análisis exploratorio de muertes por COVID 19"
+author: "Kenneth Roy Cabrera Torres"
+date: "Viernes, 23 de julio de 2021"
+output:
+  pdf_document:
+    toc: yes
+  html_document:
+    toc: yes
+    css: estilo1.css
+    fig_height: 9
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE,
+                      message = FALSE,
+                      warning = FALSE)
+options(width = 120)
+```
+
+
+```{r}
+library(tidyverse)
+```
+
+
+```{r}
+load("covid_19_decesos_x_mes.RData" )
+```
+
+## Departamentos con mayores decesos.
+
+```{r}
+temporal1 <- covid_19_decesos_x_mes %>% 
+  group_by(Codigo_dpto, DPNOM, mes) %>% 
+  summarise(total_muertes = sum(muertes),
+            poblacion = sum(poblacion)) %>% 
+  ungroup()
+temporal1 <- temporal1 %>% 
+  mutate(muertes_x_cien_mil = total_muertes / poblacion * 100000)
+```
+
+### Número de muertes por rango de edad y departamento
+
+```{r}
+tabla1 <- temporal1 %>%   arrange(mes, desc(total_muertes)) 
+tabla1 %>% data.frame()
+```
+
+### Número de muertes por rango de edad y departamento (ordenado por cienmilaje).
+
+```{r}
+tabla2 <- temporal1 %>%   arrange(mes, desc(muertes_x_cien_mil)) 
+tabla2 %>% data.frame()
+```
+
+```{r}
+tabla3 <- temporal1 %>% 
+  group_by(Codigo_dpto, DPNOM) %>% 
+  summarise(muertes_T = sum(total_muertes)) %>% 
+  arrange(desc(muertes_T)) %>% 
+  ungroup()
+tabla3 %>% data.frame()
+```
+
+
+```{r}
+mayor_num_muertes <- tabla3 %>% 
+  slice(1:4) 
+```
+
+```{r}
+covid_19_critico <- covid_19_decesos_x_mes %>% 
+  filter(Codigo_dpto %in% mayor_num_muertes$Codigo_dpto) %>% 
+  mutate(DPNOM = factor(DPNOM, levels = mayor_num_muertes$DPNOM))
+```
+
+
+## Muertes a lo largo del tiempo por rangos de edades y departamentos más críticos.
+
+```{r}
+ggplot(covid_19_critico, aes(mes, muertes, col = edad_gr_et)) +
+  geom_line(aes(group = edad_gr_et)) +
+  facet_grid(DPNOM ~ genero) +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+  geom_vline(xintercept = "2021-02") +
+  annotate("text", x = "2021-03", y = 700, label = "Inicio de vacunación",
+           size = 2)
+```
+
+## Muertes a lo largo del tiempo por rangos de edades y departamentos más críticos (escala log10).
+
+```{r}
+ggplot(covid_19_critico, aes(mes, muertes_x_cien_mil, col = edad_gr_et)) +
+  geom_line(aes(group = edad_gr_et)) +
+  facet_grid(DPNOM ~ genero) +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+  geom_vline(xintercept = "2021-02") +
+  annotate("text", x = "2021-03", y = 700, label = "Inicio de vacunación",
+           size = 2) +
+  scale_y_log10()
+```
+
+## Muertes de ciertos rangos de edad.
+
+```{r}
+temp1 <- covid_19_critico %>% 
+  filter(edad_gr_et %in% c("(15,20]", "(20,25]", 
+                           "(40,45]",  "(45,50]",  "(50,55]",
+                           "(65,70]",  "(70,75]",  "(75,Inf]"))
+ggplot(temp1, aes(mes, muertes, col = edad_gr_et)) +
+  geom_line(aes(group = edad_gr_et)) +
+  scale_y_log10() +
+  facet_grid(DPNOM ~ genero) +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+  geom_vline(xintercept = "2021-02") +
+  annotate("text", x = "2021-03", y = 700, label = "Inicio de vacunación",
+           size = 2)
+```
+
+## Muertes por cienmilaje. 
+
+```{r}
+temp1 <- covid_19_critico %>% 
+  filter(edad_gr_et %in% c("(15,20]", "(20,25]", 
+                           "(40,45]",  "(45,50]",  "(50,55]",
+                           "(65,70]",  "(70,75]",  "(75,Inf]"))
+ggplot(temp1, aes(mes, muertes_x_cien_mil, col = edad_gr_et)) +
+  geom_line(aes(group = edad_gr_et)) +
+  scale_y_log10() +
+  facet_grid(DPNOM ~ genero) +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+  geom_vline(xintercept = "2021-02") +
+  annotate("text", x = "2021-03", y = 700, label = "Inicio de vacunación",
+           size = 2)
+
+```
+
