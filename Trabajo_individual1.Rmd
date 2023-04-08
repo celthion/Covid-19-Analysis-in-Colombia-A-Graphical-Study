@@ -1,0 +1,716 @@
+---
+title: "Trabajo individual"
+author: "David Cardona Duque"
+date: "8/20/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE,
+                      message = FALSE,
+                      warning = FALSE)
+```
+
+```{r}
+library(readxl)
+library(arsenal)
+library(funModeling)
+library(tidyverse)
+library(ggplot2)
+load("base_final_filtrada_rangos_contagios.RData")
+
+```
+
+<div style="text-align: justify">
+
+## **Introducción**
+
+##### El presente trabajo desarrolla un análisis gráfico de coeficientes relevantes respecto a los contagios por 100000 habitantes en Colombia delimitado por variables de población, edad, regiones y periodos de tiempo, que servirán como materia prima para generar un acercamiento al análisis respecto a los efectos del déficit fiscal y el posible manejo de la pandemia por parte de los municipios teniendo en cuenta el aumento o no de contagios en las respectivas regiones; en otro punto los contagios diferenciados por sexos y edades en los periodos de tiempo donde se presentaran planteamientos con base en implicaciones diferenciadas con base en el género como las actividades y edades productivas, teniendo por ultimo en cuenta la diferencia de contagio según los periodos de tiempo que permiten un contraste entre la etapa de implementación de medidas restrictivas de aislamiento preventivo y su finalización. 
+
+## **Marco Teórico**
+
+##### Debido a la pandemia ocasionada por el COVID- 19 los Estados a nivel mundial debieron aplicar diversas medidas de contención respecto al virus por sus implicaciones en la salud pública y desarrollo de actividades económicas. Considerando lo anterior fue necesario un registro de contagios, muertes, recuperaciones, entre otras con el fin de tomar decisiones pertinentes frente a la crisis, a partir de esto para el desarrollo de este analisis se utilizaran los datos del Instituto Nacional de Salud sobre los casos positivos en Colombia separados principalmente por sexo, edad, fecha y municipio donde se consideran los contagios según el Ministerio de Salud (2020) "a través de pruebas moleculares; sin embargo, primero se descarta o confirma la presencia de los virus más frecuentes así como el antecedente de viaje del paciente a países del exterior de Colombia o su contacto con un caso confirmado" (p.2). También servirán de referencia los datos del Índice de Desempeño Fiscal (IDF) entendido por el Departamento Nacional de Planeación (s.f) como "una medición del desempeño de la gestión financiera de las entidades territoriales que da cuenta de su sostenibilidad financiera", que complementará el análisis en los periodos de tiempo especificados para el desarrollo del trabajo.
+
+##### Entendiendo la pertinencia del análisis de los contagios con base en la pandemia se hace beneficioso el uso del lenguaje de programación R en especial por su enfoque estadístico óptimo para el análisis de datos, en conjunto los paquetes de R que contienen funciones útiles con códigos abreviados que mejoran la eficiencia; herramientas integradas a lecturas propias con elementos de estudio exploratorios y descriptivos examinando el tema abordado.
+
+## **Objetivos**
+
+#### Comparar paquetes de análisis exploratorio automático.
+
+#### Examinar los contagios por 100000 habitantes en dos regiones de Colombia (Caribe y Pacifica) con base en periodos de tiempo, sexo y edades.
+
+#### Observar desde una perspectiva exploratoria y descriptiva los resultados obtenidos.
+
+#### Presentar hipótesis de acercamiento a los análisis realizados.
+
+## Asignación correspondiente de base de datos de acuerdo al número de documento
+
+#### Documento: 100.11.333.24
+
+### Regiones:
+
+#### Región Caribe - Región Pacífica. Último número 4
+
+### Rangos de edad.
+
+#### 17-23 vs. 24-30. Penúltimo número 2
+
+### Periodos
+
+#### Periodo 5: 25/mayo/2021 - 18/agosto/2021 vs. Periodo 1: 2/marzo/2020 - 22/sep/2020. Antepenúltimo número 3
+
+### Paquetes del R
+
+#### 4.funModeling Vs.5.arsenal. Trasantepunúltimo número 3
+
+## Depuraciones
+
+### Sobre la base de datos "covid_19"
+
+##### Se hace un cambio al formato RData para facilitar el trabajo con la misma.
+
+##### Se cambia el tipo de variable de "Fecha.de.notificación" a fecha puesto que se acerca más a la naturaleza real de esta variable.
+
+##### Se crea una nueva variable con base a la variable "Edad" puesto que los valores de esta dependían de si se expresaba en meses, días, etc. Se generaliza a años para un mayor entendimiento de la misma.
+
+##### Se crean rangos de edades de [17,23] y de (23,30], además que se agrupan las edades que entran en estos rangos, puesto que son la población objetiva de este análisis. Se guardan en una nueva variable llamada "edad_gr_et"
+
+##### Se hace un cambio en el tipo de la variable "Código.DIVIPOLA.municipio" a carácter puesto que es el tipo real de esta variable, además se le guarda como "Codigo_munc" para un mejor entendimiento y acceso a futuro.
+
+##### Se crea una nueva base de datos llamada "covid_19_contagios" donde se seleccionan las variables "ID.de.caso, Sexo, Edad_R, edad_gr_et, Codigo_munc, Fecha.de.notificación"
+
+#### **Sobre la base "covid_19_contagios"**
+
+##### Se cambia el formato de la variable sexo, se pasa a llamar genero y las personas F pasan a ser mujeres, por otro lado las M pasan a ser Hombres.
+
+##### Se cambia el tipo de la variable "mes" a date puesto que es el tipo real de la misma
+
+##### Se agrupan las variables "mes, Codigo_munc, edad_gr_et, genero" y se hace una suma de los contagios guardándose en la variable "contagios".
+
+##### Todo lo anterior se guarda en una nueva base de datos llamada "covid_19_contagios_x\_mes"
+
+#### **Sobre "covid_19_contagios_x\_mes"**
+
+##### Se cambia el tipo de la variable "Codigo_munc" a numerico para una estandarizacion de la misma, más específicamente la eliminación del cero a la izquierda en el código para una posterior unión con otra base de datos.
+
+##### Se une la base de datos con "pobla_total_munc_x\_gr_et" para un análisis más completo a posteriori, puesto que tienen información útil, como por ejemplo, el número de la población estimada por grupo de edad, género y periodo.
+
+##### La anterior unión se guarda en "covid_19_contagios_x\_mes".
+
+##### Se crea una nueva variable "contagios_x\_cien_mil" que tiene en cuenta los contagios por 100000 en cuanto a población para un análisis posterior en el impacto real de los contagios en el territorio, puesto que si un territorio tiene muchos habitantes es probable que tenga más contagios y no es necesariamente grave vs. un territorio con menores contagios pero con una mayor tasa por 100000 de los mismos.
+
+### Sobre la base de datos "pobla_munc"
+
+##### Se seleccionan las variables de interés para el análisis posterior, excluyendo "Total, Total Hombres, Total Mujeres" y se guarda en una nueva base de datos pobla_munc1.
+
+#### **Sobre la base pobla_munc1.**
+
+##### Se transforman las variables "Hombre_x" a una manera larga almacenándolas en la variable genero, luego se crea la variable edad con la parte luego del guion bajo, con la intención de un mayor entendimiento de las mismas y un mejor uso a futuro. Todo lo anterior se guarda en una nueva base llamada "pobla_munc_largo".
+
+#### **Sobre la base de datos "pobla_munc_largo".**
+
+##### Se filtra la base de datos de acuerdo a que la variable género sea diferente de total y el ÁREA GEOGRÁFICA sea la completa, esto con el objetivo de tener una información completa a la hora de hacer análisis y no se generen errores al tomar la variable género.
+
+##### Se seleccionan las variables "DPMP, MPIO, genero, edad, poblacion" y se hace un cambio de tipo a la variable edad a entero con el objetivo de un mejor uso de la misma, los valores de "100 y mas" se cambian solamente a 100 para realizar este cambio, puesto que esta no es la población objetiva de este análisis.
+
+##### Se crean rangos de edades de [17,23] y de (23,30],además que se agrupan las edades que entran en estos rangos, puesto que son la población objetiva de este análisis. Se guardan en una nueva variable llamada "edad_gr_et"
+
+##### Todo lo anterior se guarda en una nueva base llamada "pobla_total_munc_2020".
+
+#### **Sobre "pobla_total_munc_2020"**
+
+##### Se agrupan las variables "edad_gr_et, DPMP, MPIO, genero" puesto que son las variables de interés y se crea una variable "poblacion" que contenga la totalidad de la población por cada grupo pasado.
+
+##### Lo anterior se guarda en una nueva base llamada "pobla_total_munc_x\_gr_et"
+
+#### **Sobre"pobla_total_munc_x\_gr_et"**
+
+##### Se cambia el tipo de la variable "DPMP" a numérico para una estandarización de la misma, más específicamente la eliminación del cero a la izquierda en el código para una posterior unión con otra base de datos.
+
+##### Se une la base de datos con "covid_19_contagios_x\_mes" para un análisis más completo a posteriori, puesto que tienen información útil, como por ejemplo, el número de contagios estimados por grupo de edad, género y periodo.
+
+##### La anterior unión se guarda en "covid_19_contagios_x\_mes".
+
+### Sobre la base de datos "regiones"
+
+##### Se cambia el tipo de la variable "CÓDIGO.DANE.DEL.MUNICIPIO" a numérico para una estandarización de la misma, más específicamente la eliminación del cero a la izquierda en el código para una posterior unión con otra base de datos.
+
+##### Se une la base de datos con "covid_19_contagios_x\_mes" para un análisis más completo a posteriori, puesto que tienen información útil, como por ejemplo, la región a la que pertenece cada municipio.
+
+##### La unión se convierte en una nueva base de datos llamada "covid_19_contagios_x\_mes_regiones".
+
+### Sobre la base de datos "fiscal"
+
+##### Se seleccionan las variables "Código,Indicador de desempeño Fiscal 7/" puesto que son las variables de interés en este análisis. Se guarda en una nueva base de datos llamada "fiscal1"
+
+#### **Sobre "fiscal1"**
+
+##### Se cambia el tipo de la variable "Código" a numérico para una estandarización de la misma, más específicamente la eliminación del cero a la izquierda en el código para una posterior unión con otra base de datos.
+
+##### Se cambia el nombre de la variable "Indicador de desempeño Fiscal 7/" a "IDF" para un mayor entendimiento de la misma en análisis futuros.
+
+##### Se seleccionan las variables "Código,IDF" puesto que son las variables de interés para este análisis. Se guardan en una nueva base de datos llamada "fiscal2".
+
+#### **Sobre "fiscal2"**
+
+##### Se une la base de datos con "covid_19_contagios_x\_mes_regiones" para un análisis más completo a posteriori, puesto que tienen información útil, como por ejemplo, el indicador de desempeño fiscal (IDF) de cada municipio. Se guarda en una nueva base llamada "covid_19_contagios_x\_mes_regiones_IDF".
+
+### Sobre la base de datos "covid_19_contagios_x\_mes_regiones_IDF"
+
+##### Se cambia el tipo de la variable "Codigo_munc" a carácter puesto que es el tipo real de la misma y ya se hicieron las operaciones que necesitaban su uso como numérico.
+
+##### Se seleccionan todas las variables excluyendo "CÓDIGO.DANE.DEL.DEPARTAMENTO,MUNICIPIO" puesto que ya están repetidas con otro nombre dentro de la base de datos. Se guarda en una nueva base llamada "base_final_sin_filtrar_rangos_contagios"
+
+### Sobre la base de datos "base_final_sin_filtrar_rangos_contagios"
+
+##### Se filtra la variable "edad_gr_et" para todos los datos que no sean NA, puesto que estos grupos de edad son los que nos interesan en este análisis. Se guarda en una nueva base llamada "base_final_filtrada_rangos_contagios".
+
+#### **Sobre "base_final_filtrada_rangos_contagios"**
+
+##### Se cambia el tipo de la variable "mes" a fecha puesto que es el tipo real de esta variable.
+
+##### Se filtra la variable "mes" entre las fechas 2020-03-02 y 2020-09-22 o 2021-05-25 en adelante, puesto que son los intervalos de tiempo de interés en este análisis.
+
+##### Se cambia el nombre de la variable "mes" por "Fecha_de_notificacion" puesto que este nombre se acerca más al origen de la variable, ya que, si se observa esta no solo contiene el mes si no además el día, también muestra de mejor manera de donde proviene y cuál es su significado para análisis futuros.
+
+##### Se filtra la variable "REGION" en las regiones "Región Pacífico, Región Caribe" puesto que son las regiones de interés en este análisis.
+
+## Paquetes automáticos de análisis exploratorio y descriptivo
+
+### Arsenal
+
+#### Algunas funciones de arsenal son:
+
+#### **"mdy.Date"**
+
+##### Convierte fechas numéricas a objetos del tipo Date, y viceversa.
+
+```{r}
+objeto_fecha<-mdy.Date(08, 08, 2021, yearcut = 120)
+objeto_fecha
+Date.mdy(objeto_fecha)
+```
+
+#### **"comparedf"**
+
+##### Compara dos data.frames y reporta cualquier diferencia entre ellos.
+
+```{r}
+fiscal <- read_excel("fiscal-2019.xlsx",
+                         skip = 7)
+regiones <- read.csv("Departamentos_y_municipios_de_Colombia.csv",
+                     encoding = "UTF-8")
+compare<-comparedf(fiscal,regiones,by.x="Municipio",by.y="MUNICIPIO")
+summary(compare)
+```
+
+#### **"includeNA"**
+
+##### Aplica a los valores NAs en un vector una etiqueta específica.
+
+```{r}
+includeNA(fiscal$`Ciudades Capitales`, label = "(Missing)", first = FALSE)
+```
+
+#### **Conclusiones**
+
+##### Este paquete de análisis automático posee muy pocas funciones para un análisis exploratorio, su fuerte general está en sus funciones de depuración que dan información útil sobre, por ejemplo, las diferencias entre 2 bases de datos, pero más allá de eso el paquete no ofrece muchas ventajas que R y Rstudio no tengan de manera nativa o en su defecto otros paquetes como tydiverse lo hacen de una manera más eficiente.
+
+### funModeling
+
+#### Algunas funciones de funModeling son:
+
+#### **"correlation_table"**
+
+##### Obtiene una tabla de correlación para todas las variables contra una variable objetivo. Solo variables numéricas son analizadas.
+
+```{r}
+tabla_correlacion<-correlation_table(fiscal, "1/ Autofinanciación de los gastos de funcionamiento")
+tabla_correlacion
+```
+
+#### **"df_status"**
+
+##### Para cada variable devuelve: Cantidad y porcentaje de ceros (q_zeros y p_zeros respectivamente). Mismos indicadores para valores NA (q_NA/p_na), y valores infinitos (q_inf/p_inf). Las últimas 2 columnas indican tipos de datos y cantidad de valores únicos. Esta función imprime y devuelve los resultados.
+
+```{r}
+df_status(fiscal$`Area Metropolitina`)
+```
+
+#### **"plot_num"**
+
+##### Devuelve un gráfico que contiene todos los histogramas de las variables numéricas. Los valores NA no serán mostrados.
+
+```{r}
+
+plot_num(fiscal, bins = 10)
+```
+
+#### **Conclusiones**
+
+##### En general, el paquete funModeling tiene una gran cantidad de funciones interesantes que permite ahorrar trabajo a la hora de hacer un análisis exploratorio, como por ejemplo, permite de una manera más completa y eficiente que las funciones nativas desarrollar gráficas de interés además de resumir características relevantes de las bases de datos. Además la sintaxis para el uso de las mismas es sencilla y permite una fácil comprensión lógica de su uso.
+
+### Comparación entre paquetes
+
+#### **Sobre la sintaxis**
+
+##### La sintaxis de las funciones del paquete arsenal poseen un menor grado de interpretación en cuanto a quien las use, puesto que, sus palabras reservadas en algunos casos no terminan teniendo una relación de manera clara con su accionar, por ejemplo, en la función "selectall" se utiliza el argumento "x" para hacer referencia al data frame al cual se le aplicara, el argumento con nombre "x" es sumamente genérico y no representa el objetivo del argumento y si se lee sin una explicación termina siendo poco claro. En comparación el paquete funModeling tiene una sintaxis clara que si refleja el objetivo de la mayoría de sus argumentos, por ejemplo, en la función "discretize_df" el argumento "stringsAsFactors" muestra claramente desde su sintaxis que el objetivo del mismo es convertir variables de tipo string a factor, esto facilita un mayor entendimiento a posterior del código y una mayor efectividad debido a la recordación de las palabras que hace por lo tanto que su uso sea más fluido por parte de la persona programadora.
+
+#### **Sobre la utilidad**
+
+##### En términos de la utilidad general, el paquete funModeling es mejor en muchos aspectos que arsenal, empezando por las funciones encaminadas a depurar, el paquete funModeling brinda una gama de funciones útiles y eficientes, pero lo más importante es que cumplen objetivos que no se podrían cumplir con las funciones nativas, en cambio, arsenal posee una cantidad de funciones que cumplen objetivos bastantes similares a funciones nativas, pero no lo hacen de una mejor manera, por el contrario, sus argumentos y su proceso lógico es en varias ocasiones menos claro, por ejemplo, la función "mdy.Date" cumple un fin parecido a la función "as.date" nativa pero el argumento "year.cut" de la primera no funciona correctamente además que no se le puede pasar una variable como argumento sino una fecha numérica. Ahora refiriéndonos a las funciones con uso en el análisis exploratorio arsenal tiene muy pocas funciones con este propósito, por otro lado, funModeling tiene una amplia gama que va desde histogramas hasta matrices de entropía que nos pueden ayudar en este objetivo, de una manera más eficiente que las nativas gracias a que se puede efectuar de manera automática a todas las variables con un solo comando y no uno a uno.
+
+#### **Conclusiones**
+
+##### En conclusión, el paquete funModeling es ampliamente mejor que arsenal, desde la utilidad de sus funciones, sean para depurar o generar análisis, o desde su sintaxis y legibilidad. Siendo funModeling un paquete fácil de usar y con gran utilidad a la hora de explorar datos de manera eficaz.
+
+## Análisis descriptivo y exploratorio con "contagios_x\_cien_mil" como variable de respuesta.
+
+### Sobre las regiones.
+
+#### **Sexo Hombres.**
+
+##### Se efectúa una transformación logarítmica con base 10 a la variable "contagios_x\_cien_mil" para una mejor apreciación gráfica, esto solo se efectúa para la realización de estas.
+
+```{r}
+analisis_x_mes <- base_final_filtrada_rangos_contagios %>% 
+  group_by(mes = format(Fecha_de_notificacion, "%Y-%m"),
+           Codigo_munc, edad_gr_et, genero,MPIO,poblacion,contagios_x_cien_mil,REGION,DEPARTAMENTO,IDF) %>% 
+  summarise(contagios_x_cien_mil = sum(contagios_x_cien_mil)) %>%
+  ungroup()
+
+regiones_hombre <-  filter(base_final_filtrada_rangos_contagios, genero == "Hombres")
+
+x=regiones_hombre$contagios_x_cien_mil
+x1=log10(x)
+
+
+boxplot(x1 ~ regiones_hombre$REGION, 
+        col=c('lightblue', 'pink'),
+        xlab='Region', main='Contagios por dia de hombres por cien mil habitantes log10',
+        ylab='Contagios diarios por cien mil (log10)',
+      
+        whiskcol = "blue",
+        whisklty = 2,
+        outbg = "green")## logaritmo en base 10
+
+
+
+```
+
+##### **Summary contagios diarios hombres por cien mil habitantes - Región Pacífico.**
+
+```{r}
+
+region_pacifico_hombres <- filter(regiones_hombre,REGION=="Región Pacífico")
+summary(region_pacifico_hombres$contagios_x_cien_mil)
+```
+
+##### **Summary contagios diarios hombres por cien mil habitantes - Región Caribe.**
+
+```{r}
+region_caribe_hombres <- filter(regiones_hombre,REGION=="Región Caribe")
+summary(region_caribe_hombres$contagios_x_cien_mil)
+```
+
+##### Se observan mediante el diagrama de cajas y los resúmenes de las variables que la región pacifico tiene ligeramente más contagios hombres por cien mil habitantes que la región caribe, aunque las diferencias mediante la gráfica puede no parecer alarmante, se debe tener en cuenta que cada aumento aunque sea marginal en las personas contagiadas es altamente peligroso gracias a la difusión del COVID-19. El promedio de contagiados hombres por día y cienmilaje en la región pacífico es de 78.026 vs. el promedio en la región caribe que es de 56.853, esto de la mano del modelo de análisis, que ayuda a ver en perspectiva el número de contagios gracias a su cienmilaje demuestra una peor gestión por parte de la región pacifica en cuanto a los hombres contagiados diariamente.
+
+#### **Sexo Mujeres.**
+
+##### Se efectúa una transformación logarítmica con base 10 a la variable "contagios_x\_cien_mil" para una mejor apreciación gráfica, esto solo se efectúa para la realización de estas.
+
+```{r}
+regiones_mujer <-  filter(base_final_filtrada_rangos_contagios, genero == "Mujeres")
+
+x=regiones_mujer$contagios_x_cien_mil
+x1=log10(x)
+
+
+boxplot(x1 ~ regiones_mujer$REGION, 
+        col=c('orange', 'yellow'),
+        xlab='Region', main='Contagios por dia de mujeres por cien mil habitantes log10',
+        ylab='Contagios diarios por cien mil (log10)',
+      
+        whiskcol = "blue",
+        whisklty = 2,
+        outbg = "green")## logaritmo en base 10
+
+```
+
+##### **Summary contagios diarios mujeres por cien mil habitantes - Región Pacífico.**
+
+```{r}
+region_pacifico_mujer <- filter(regiones_mujer,REGION=="Región Pacífico")
+summary(region_pacifico_mujer$contagios_x_cien_mil)
+```
+
+##### **Summary contagios diarios mujeres por cien mil habitantes - Región Caribe.**
+
+```{r}
+region_caribe_mujeres <- filter(regiones_mujer,REGION=="Región Caribe")
+summary(region_caribe_mujeres$contagios_x_cien_mil)
+```
+
+##### Se observan mediante el diagrama de cajas y los resúmenes de las variables que la región pacifico de nuevo tiene más contagios por cien mil habitantes, en este caso mujeres, algo de destacar es que hay una mayor tasa de contagio general en las mujeres con base a los promedios de cada análisis, siendo las de este 80.9971 para la región pacifica y 62.031 en la región caribe. Esto debido posiblemente al impacto de la pandemia en las mujeres y en sus necesidades económicas, provocando que se tengan que arriesgar más que los hombres a la hora de salir a trabajar o en general.
+
+### Sobre los rangos de edad
+
+#### **Sexo Hombres.**
+
+##### Se efectúa una transformación logarítmica con base 10 a la variable "contagios_x\_cien_mil" para una mejor apreciación gráfica, esto solo se efectúa para la realización de estas.
+
+```{r}
+edades_hombres <-  filter(base_final_filtrada_rangos_contagios, genero == "Hombres")
+edades_hombres_17 <-filter(edades_hombres, edad_gr_et=="[17,23]")
+edades_hombres_24 <- filter(edades_hombres, edad_gr_et=="(23,30]")
+
+x=edades_hombres_17$contagios_x_cien_mil
+x1=log10(x)
+
+x2=edades_hombres_24$contagios_x_cien_mil
+x3=log10(x2)
+
+hist(x1,na.rm = TRUE, col = "blue",freq = FALSE,
+      las = 1, 
+     main = "Contagios diarios hombres de 17 a 23 por cien mil habitantes",
+     xlab = "Contagios diarios hombres de 17 a 23 por cien mil habitantes (log10)",
+     ylab = "Densidad",
+     ylim = c(0,1.5)
+
+     
+     )
+lines(density(x1), col = "orange", lwd = 3)
+
+hist(x3,na.rm = TRUE, col = "#a0c39f",freq = FALSE,
+      las = 1, 
+     main = "Contagios diarios hombres de 24 a 30 por cien mil habitantes",
+     xlab = "Contagios diarios hombres de 24 a 30 por cien mil habitantes (log10)",
+     ylab = "Densidad",
+     ylim = c(0,1.5)
+     
+     )
+lines(density(x3), col = "orange", lwd = 3)
+```
+
+##### **Summary contagios diarios hombres por cien mil habitantes - [17,23].**
+
+```{r}
+summary(edades_hombres_17$contagios_x_cien_mil)
+```
+
+##### **Summary contagios diarios hombres por cien mil habitantes - (23.30]**
+
+```{r}
+summary(edades_hombres_24$contagios_x_cien_mil)
+
+```
+
+##### De acuerdo a ambas gráficas se puede observar una tendencia a la simetría en ambos rangos de edades, debido posiblemente a que no son tan diferentes entre sí y que el comportamiento de ambos grupos en la pandemia fue parecido, aunque cabe resaltar que existe mayor tendencia a la simetría en las edades de 24 a 30 lo que se puede generar por una mayor consistencia en el comportamiento de estas personas, ya que la mayoría está en etapa productiva y se ven obligadas a exponerse a los contagios vs. el grupo de 17 a 23 donde algunas están en etapa productiva y otras no. Por otro lado, analizando las tablas de resumen se puede apreciar que quien tiene mayor tasa de contagio es el grupo de 24 a 30 con un promedio de 71.7311 contagiados por cien mil personas, esto debido a la explicación anterior que muestra como es más probable que se vean expuestos. Aunque se logra ver que el mayor valor pertenece al grupo de 17 a 23 con un contagio de 2197.802 por cien mil habitantes, esto debido posiblemente a un comportamiento anormal de este grupo en tiempos donde las medidas de bioseguridad se aminoraron.
+
+#### **Sexo Mujeres.**
+
+##### Se efectúa una transformación logarítmica con base 10 a la variable "contagios_x\_cien_mil" para una mejor apreciación gráfica, esto solo se efectúa para la realización de estas.
+
+```{r}
+edades_mujeres <-  filter(base_final_filtrada_rangos_contagios, genero == "Mujeres")
+edades_mujeres_17 <-filter(edades_mujeres, edad_gr_et=="[17,23]")
+edades_mujeres_24 <- filter(edades_mujeres, edad_gr_et=="(23,30]")
+
+x=edades_mujeres_17$contagios_x_cien_mil
+x1=log10(x)
+
+x2=edades_mujeres_24$contagios_x_cien_mil
+x3=log10(x2)
+
+hist(x1,na.rm = TRUE, col = "blue",freq = FALSE,
+      las = 1, 
+     main = "Contagios diarios mujeres de 17 a 23 por cien mil habitantes",
+     xlab = "Contagios diarios mujeres de 17 a 23 por cien mil habitantes (log10)",
+     ylab = "Densidad",
+     ylim = c(0,1.5)
+
+     
+     )
+lines(density(x1), col = "orange", lwd = 3)
+
+hist(x3,na.rm = TRUE, col = "#a0c39f",freq = FALSE,
+      las = 1, 
+     main = "Contagios diarios mujeres de 24 a 30 por cien mil habitantes",
+     xlab = "Contagios diarios mujeres de 24 a 30 por cien mil habitantes (log10)",
+     ylab = "Densidad",
+     ylim = c(0,1.5)
+     
+     )
+lines(density(x3), col = "orange", lwd = 3)
+```
+
+##### **Summary contagios diarios mujeres por cien mil habitantes - [17,23].**
+
+```{r}
+summary(edades_mujeres_17$contagios_x_cien_mil)
+```
+
+##### **Summary contagios diarios mujeres por cien mil habitantes - (23.30]**
+
+```{r}
+summary(edades_mujeres_24$contagios_x_cien_mil)
+
+```
+
+##### En estas gráficas, a diferencia de las anteriores, se puede ver una mayor acumulación de los datos hacia la derecha, lo que implica que en las mujeres hay más contagios por cien mil habitantes, en específico la gráfica del grupo de 24 a 30 muestra una acumulación más grande en datos mayores, esto debido probablemente a que en estos rangos de edad se está en etapa productiva, por el contrario, aunque en el grupo de 17 a 23 si se observa una acumulación a la izquierda, esta no es tan absoluta, esto debido posiblemente a que parte de las mujeres en esta edad estén estudiando y se les migrara a la virtualidad, lo que reduce el riesgo de contagio. Observando la tabla de resumen podemos confirmar que con base a los promedios, que son respectivamente 60.5867 y 76.0978, que si existe un mayor contagio por parte de en general las mujeres, pero más específicamente de las que pertenecen al grupo de 24 a 30, de nuevo posiblemente a los impactos de la pandemia y su obligación económica como personas que impide un correcto cuidado en la pandemia.
+
+### Sobre los periodos considerados
+
+#### **Sexo Hombres.**
+
+##### Se efectúa una transformación logarítmica con base 10 a la variable "contagios_x\_cien_mil" para una mejor apreciación gráfica, esto solo se efectúa para la realización de estas.
+
+```{r}
+fechas_mayores <- filter(base_final_filtrada_rangos_contagios,Fecha_de_notificacion >= "2021-05-25")
+fechas_mayores_hombres <- filter(fechas_mayores, genero == "Hombres")
+
+fechas_menores <- filter(base_final_filtrada_rangos_contagios,Fecha_de_notificacion >="2020-03-2" & Fecha_de_notificacion<"2020-09-22")
+fechas_menores_hombres <- filter(fechas_menores, genero == "Hombres")
+
+x=fechas_mayores_hombres$contagios_x_cien_mil
+x1=log10(x)
+
+x2=fechas_menores_hombres$contagios_x_cien_mil
+x3=log10(x2)
+
+hist(x1,na.rm = TRUE, col = "purple",freq = TRUE,
+      las = 1, 
+     main = "Contagios diarios Hombres, entre 2021-05-25 y 2021-08-18",
+     xlab = "Contagios diarios Hombres por cien mil habitantes (log10)",
+     ylab = "Frecuencia",
+     ylim = c(0,2100)
+
+     )
+
+hist(x3,na.rm = TRUE, col = "green",freq = TRUE,
+      las = 1, 
+     main = "Contagios diarios Hombres, entre 2020-03-2 y 2020-09-22",
+     xlab = "Contagios diarios Hombres por cien mil habitantes (log10)",
+     ylab = "Frecuencia",
+     ylim = c(0,2100)
+
+
+     )
+```
+
+##### **Summary contagios diarios Hombres por cien mil habitantes - [2021-05-25 y 2021-08-18].**
+
+```{r}
+summary(x)
+```
+
+##### **Summary contagios diarios Hombres por cien mil habitantes - [2020-03-2 y 2020-09-22].**
+
+```{r}
+summary(x2)
+```
+
+##### Se observa en las gráficas como en el periodo de 2021-05-25 y 2021-08-18 existe una mayor acumulación de los datos a la derecha a comparación de la que pertenece al periodo 2020-03-2 y 2020-09-22, además que las frecuencias de manera general son más alta en la primera, esto es causado posiblemente por las distintas dinámicas pandémicas, entre ellas, las cuarentenas obligatorias que en el segundo periodo estaban en vigor vs. la aminoración paulatina en el primer periodo, también existe la posibilidad de que esto se combinara con el surgimiento de nuevas variantes y la necesidad imperante de salir a trabajar de manera presencial, lo que produce claramente un aumento en los contagios, puesto que existe mayor transmisibilidad del virus. Ahora bien observando las tablas de resumen, se ve una gran diferencia entre los promedios de ambos periodos, siendo 75.713 y 54.206 respectivamente, lo cual respalda la hipótesis anterior, si observamos los valores máximos de ambas variables podemos ver que sorpresivamente el valor más alto es el del segundo periodo siendo este de 2197.802 contagiados por cien mil habitantes vs. el del primero que es de 1993.3555 contagiados por cien mil habitantes, una hipótesis para esto es que al principio de la pandemia (periodo 2) tomo un tiempo considerable adaptarnos a la misma y tomar medidas de bioseguridad, por lo cual al principio eran probables contagios por día altos, por otro lado, si observamos el primer valor máximo, se ve como aunque los contagios en general son más altos por las necesidades de las personas, hay más herramientas para disminuirlos y que no tomen valores por día tan altos, entre estas herramientas podemos observar la vacunación.
+
+#### **Sexo Mujeres**
+
+##### Se efectúa una transformación logarítmica con base 10 a la variable "contagios_x\_cien_mil" para una mejor apreciación gráfica, esto solo se efectúa para la realización de estas.
+
+```{r}
+fechas_mayores_mujeres <- filter(fechas_mayores, genero == "Mujeres")
+
+fechas_menores_mujeres <- filter(fechas_menores, genero == "Mujeres")
+
+x5=fechas_mayores_mujeres$contagios_x_cien_mil
+x6=log10(x5)
+
+x7=fechas_menores_mujeres$contagios_x_cien_mil
+x8=log10(x7)
+
+hist(x6,na.rm = TRUE, col = "purple",freq = TRUE,
+      las = 1, 
+     main = "Contagios diarios Mujeres, entre 2021-05-25 y 2021-08-18",
+     xlab = "Contagios diarios Mujeres por cien mil habitantes (log10)",
+     ylab = "Frecuencia",
+     ylim = c(0,2100)
+
+
+     )
+
+hist(x8,na.rm = TRUE, col = "green",freq = TRUE,
+      las = 1, 
+     main = "Contagios diarios Mujeres, entre 2020-03-2 y 2020-09-22",
+     xlab = "Contagios diarios Muejeres por cien mil habitantes (log10)",
+     ylab = "Frecuencia",
+     ylim = c(0,2200)
+
+     )
+```
+
+##### **Summary contagios diarios Mujeres por cien mil habitantes - [2021-05-25 y 2021-08-18].**
+
+```{r}
+summary(x5)
+```
+
+##### **Summary contagios diarios Hombres por cien mil habitantes - [2020-03-2 y 2020-09-22].**
+
+```{r}
+summary(x7)
+```
+
+##### En estas gráficas se muestra una diferencia considerablemente grande entre ambos periodos, siendo el que tiene mayor cantidad de casos por día por cien mil habitantes el de 2021-05-25 y 2021-08-18, aunque en el análisis pasado se dieron varias hipótesis para esto, en este caso es aún más sorprendente que sea tan marcada la diferencia, además que dentro de todos los análisis exploratorios anteriores se ha mostrado como las mujeres tienen una mayor tasa de contagios que los hombres. Si observamos las tablas resúmenes se confirma lo anterior, donde el promedio del primer periodo es de 83.5898 casos por día por cien mil habitantes y el del segundo periodo es de 52.6181 casos diarios por cien mil habitantes. Una diferencia de casi 30 casos lo cual es ampliamente preocupante, puesto que en este primer periodo ya hay mecanismos como la vacunación, analizando los valores máximos observamos como a diferencia que con los hombres, el mayor valor es perteneciente al primer periodo, una posible hipótesis para esto y para en general la mayor tasa de contagio en las mujeres es que las dinámicas de la pandemia les han forzado en mayor medida a arriesgarse que a los hombres, debido a la falta de apoyo estatal y que se ven mediadas por una sociedad patriarcal.
+
+## Análisis considerando el desempeño fiscal de cada municipio y su relación con en nivel de contagios.
+
+##### Se efectúa una transformación logarítmica con base 10 a la variable "contagios_x\_cien_mil" para una mejor apreciación gráfica, esto solo se efectúa para la realización de estas.
+
+```{r}
+idf_sin_NA <- filter(base_final_filtrada_rangos_contagios, IDF!="NA")
+idf_contagios <- base_final_filtrada_rangos_contagios %>% select(c(contagios_x_cien_mil,IDF))
+
+x=(idf_sin_NA$IDF)
+y=(idf_sin_NA$contagios_x_cien_mil)
+y1=log10((idf_sin_NA$contagios_x_cien_mil))
+
+
+scatter.smooth(x = idf_sin_NA$IDF ,y= y1,
+               main = "Relacion entre contagios en municipios e Indice de desempeño fiscal",
+               xlab = "Indice de desempeño fiscal (IDF)",
+               ylab = "Contagios diarios en municipios por cienmilaje log10",
+               col = "red")
+
+```
+
+##### **Summary sobre las variables contagios por cien mil habitantes e Indice de desempeño fiscal**
+
+```{r}
+summary(idf_contagios)
+```
+
+##### **Coeficiente de Correlación de Pearson**
+
+```{r}
+# Correlación de Pearson
+cor(x,y)
+```
+
+##### Desde la gráfica se puede observar que la relación entre el IDF y el nivel de contagios diarios por municipio no es realmente alto, pero que si existe cierta relación negativa aunque sea leve, se ve como la nube de puntos va con cierta consistencia en declive, esto significa que de cierta manera los municipios con mayor desempeño fiscal tendrán una tendencia, aunque sea baja, a tener menores contagios. Cuando observamos el coeficiente de correlación de Pearson se confirma lo anterior, existe una relación negativa, pero no muy fuerte entre ambas variables, una hipótesis para esto es que los municipios con mejor IDF tienen una mejor gestión de sus recursos y por lo tanto un mejor manejo del dinero para afrontar la pandemia, o sea, una mejor compra de insumos, vacunas, entre otras cosas, también lo que nos lleva a pensar es que aunque el IDF si influye, esta no es tan alta debido a que los municipios que tienen una mayor capacidad fiscal son los mismos que tienen actividades productivas fuertes, como por ejemplo Cali, por lo tanto es más difícil mantener medidas que frenen el comercio como las cuarentenas, ya que se tiene grandes maquinarias empresariales que se verían afectadas además de la economía del país, así es que podemos intuir que estos lugares tienen una obligación de continuar sus objetivos económicos a pesar de la pandemia. En conclusión estos municipios con mayor IDF tienen mayores capacidades organizacionales para afrontar la pandemia, pero también tienen una actividad económica esencial que evita un manejo perfecto frente a los contagios. Perciba que en la tabla resumen el valor máximo es de 2197.8022 contagios por cien mil habitantes, este valor pertenece al municipio de Distracción con un IDF de 62.39166 el cual es considerablemente bajo, ejemplificando así la hipótesis anterior.
+
+## Preguntas propias.
+
+#### **¿Existe alguna diferencia entre los contagios por cien mil habitantes en el grupo de edad de 24 a 30 entre el mes de agosto de 2020 donde se tenía aislamiento preventivo estricto y el mes de septiembre del 2020 (Decreto 1168,2020) donde se acabó esta medida y se pasó a otras menos contundentes como el pico y cédula?**
+
+#### **Variables utilizadas: Fecha de notificación, contagios por cien mil habitantes, edad**
+
+##### Se efectúa una transformación logarítmica con base 10 a la variable "contagios_x\_cien_mil" para una mejor apreciación gráfica, esto solo se efectúa para la realización de estas.
+
+```{r}
+pregunta1 <- filter(analisis_x_mes, mes == "2020-08" | mes == "2020-09")
+pregunta1 <- filter(pregunta1, edad_gr_et == "(23,30]")
+
+x = pregunta1$contagios_x_cien_mil
+x1=log10(x)
+
+boxplot(x1 ~ pregunta1$mes, 
+        col=c('red', 'blue'),
+        xlab='Mes', main='Contagios diarios de personas entre 24 y 30 por cien mil habitantes',
+        ylab='Contagios diarios por cien mil (log10)',
+      
+        whiskcol = "purple",
+        whisklty = 2,
+        outbg = "green")## logaritmo en base 10
+
+```
+
+##### **Summary contagios diarios por cien mil habitantes de edad 24 a 30 - 2020-08**
+
+```{r}
+pregunta1_1 <- filter(pregunta1, mes=="2020-08" )
+summary(pregunta1_1$contagios_x_cien_mil)
+
+```
+
+##### **Summary contagios diarios por cien mil habitantes de edad 24 a 30 - 2020-09**
+
+```{r}
+pregunta1_2 <- filter(pregunta1, mes=="2020-09")
+summary(pregunta1_2$contagios_x_cien_mil)
+
+
+```
+
+##### Sorprendentemente se observa en las gráficas una ligera disminución en la tasa de contagios en el periodo 2020-09,una hipótesis para esto es que en último mes de medidas restrictas de confinamiento como fue agosto, la población objetiva de este análisis la cual es personas de 24 a 30, ya había salido bajo excepciones o por necesidad a trabajar y por lo tanto los contagios se vieron altos, esto fundamentado en que esta población está en su gran mayoría en etapa productiva y normalmente son las personas que mantienen económicamente los núcleos familiares. Cuando vemos la tabla resumen se aprecia lo anteriormente dicho, una ligera disminución en el promedio en el segundo periodo siendo estos 157.590 y 141.948 respectivamente, la disminución de contagios entre periodos se puede tener una explicación en que antes de que se levantaran las restricciones la mayoría de lugares en general no tenía medidas de bioseguridad estrictas, puesto que se seguía con confinamiento y estas suponen un costo económico que deberían asumir las personas que son encargadas de los lugares, pero luego de que se levantaran se vieron obligados a implementar y hacer cumplir las medidas por presión seguramente del gobierno para la reactivación, haciendo así que nuestra población objetiva tuviera un poco más de garantías para evitar los contagios. En conclusión los contagios disminuyeron un poco comparativamente entre ambos periodos presumiblemente porque la población objetiva ya estaba fuera de las medidas estrictas y los lugares donde se esparcen los contagios tenían medidas más estrictas.
+
+#### **¿Existe evidencia de una relación entre un número de población bajo (hasta de 10.000 habitantes) y los contagios diarios por cien mil habitantes en la edad de 17 a 23?**
+
+#### **Variables utilizadas: Población, contagios por cien mil habitantes, edad**
+
+##### Se efectúa una transformación logarítmica con base 10 a la variable "contagios_x\_cien_mil" para una mejor apreciación gráfica, esto solo se efectúa para la realización de estas.
+
+```{r}
+pregunta2 <- filter(base_final_filtrada_rangos_contagios,edad_gr_et == "[17,23]")
+pregunta2 <- filter(pregunta2, poblacion<=10000)
+pregunta2_1 <- pregunta2 %>% select(c(poblacion,contagios_x_cien_mil))
+
+
+x= pregunta2$poblacion
+y=pregunta2$contagios_x_cien_mil
+y1=log10(y)
+
+scatter.smooth(x = x ,y= y1,
+               main = "Relacion Poblacion menor a 10.000 - Contagio en grupo [17,23]",
+               xlab = "Poblacion",
+               ylab = "Contagios diarios en [17,23] por cienmilaje log10",
+               col = "orange")
+```
+
+##### **Summary sobre las variables contagios por cien mil habitantes y población**
+
+```{r}
+summary(pregunta2_1)
+```
+
+##### **Coeficiente de Correlación de Pearson**
+
+```{r}
+cor(x,y)
+```
+
+##### Cunado observamos la gráfica vemos una curva extremadamente decreciente a medida que se aumenta la población, una hipótesis para este comportamiento es que cuando se trata de municipios con población menor a 10.000 se debe tener en cuenta que entre menos población se tenga es probable que se tenga menos dinero y recursos para afrontar la pandemia, esto en el sentido de lógicas de producción donde no se tiene una industria conformada ni se tiene una fuerza de trabajo grande, por lo tanto es probable que sus recursos antes de la pandemia fueran significativamente cortos a comparación de los municipios grandes y con la pandemia se vieron tremendamente reducidos, evitando así un correcto afrontamiento de la situación por la incapacidad de comprar los suministros, como por ejemplo, tapabocas, camas UCI, entre otros. Además cuando observamos el coeficiente de Correlación de Pearson se confirma lo anterior, existe una fuerte relación negativa entre ambas variables bajo las condiciones dadas, otro análisis para lo mismo es que al tener menor población un solo contagio como unidad marginal tiene muchísima más afectación en los contagios por cien mil habitantes, esto es correcto porque nos ayuda a medir el impacto real de ese contagio en el municipio, puesto que, solo esa persona enferma implica una disminución en la capacidad del municipio y en general los contagios se pueden viralizar de una mayor medida. Observando la tabla resumen salta a la vista que el valor máximo de contagios por cien mil bajo las condiciones de esta pregunta, es el mismo valor máximo de la base de datos general que incluye municipios grandes, lo que nos lleva a una mejor comprobación de la hipótesis, puesto que el valor pertenece al municipio de Distracción con una población de 1183 habitantes, lo cual es significativamente poco a comparación por ejemplo del municipio de Cali con una población de 130623 habitantes. En conclusión en los municipios con población de hasta 10.000 entre más aumente esta es más probable que se disminuyan los contagios por cien mil habitantes, puesto que es probable que se tenga un poco más de recursos para afrontar la pandemia y que un contagio no impacte tanto al municipio.
+
+<div/>
+
+<div style="text-align: left">
+
+## Bibliografía y Cibergrafía
+
+### **Cibergrafía**
+
+##### Departamento Nacional de Planeación.(2019).Desempeño Fiscal.*Resultados de desempeño fiscal de los departamentos y municipios de la vigencia 2019.* <https://colaboracion.dnp.gov.co/CDT/Desarrollo%20Territorial/Anexos%20Desempe%C3%B1o%20Fiscal%202019_Resultado%20Oficial.xlsx>
+
+##### Departamento Administrativo Nacional de Estadística.(2020, 9 octubre).Proyecciones de población.*Serie municipal de población por área, sexo y edad, para el periodo 2018 -2026.* <https://www.dane.gov.co/files/censo2018/proyecciones-de-poblacion/Municipal/anexo-proyecciones-poblacion-Municipal_2018-2026.xlsx>
+
+##### Departamento Nacional de Planeación. (s. f.). *Nuevo Índice de Desempeño Fiscal. Nuevo Índice de Desempeño Fiscal.* [<https://www.dnp.gov.co/DNPN/Paginas/Nuevo-indice-de-Desempeno-Fiscal.aspx>](https://www.dnp.gov.co/DNPN/Paginas/Nuevo-indice-de-Desempeno-Fiscal.aspx){.uri}
+
+##### Instituto Nacional de Salud. (2021, 18 agosto). Casos positivos de COVID-19 en Colombia, Datos Abiertos Colombia. *Casos positivos de COVID-19 en Colombia*. <https://www.datos.gov.co/Salud-y-Protecci-n-Social/Casos-positivos-de-COVID-19-en-Colombia/gt2j-8ykr>
+
+##### Ministerio de Tecnologías de la Información y las Comunicaciones.(2020, 20 mayo).Departamentos y municipios de Colombia,Datos Abiertos Colombia. *Departamentos y municipios de Colombia.* <https://www.datos.gov.co/Mapas-Nacionales/Departamentos-y-municipios-de-Colombia/xdk5-pm3f>
+
+##### 
+
+### **Bibliografía**
+
+##### Casas, P.(2020).*funModeling: Exploratory Data Analysis and Data Preparation Tool-Box [R package funModeling version 1.9.4].* Comprehensive R Archive Network (CRAN). Retrieved from <https://cran.r-project.org/package=funModeling>
+
+##### Dirección de Impuestos y Aduanas Nacionales. (2018). *Código municipios de Colombia*. <https://www.dian.gov.co/atencionciudadano/formulariosinstructivos/Formularios/2006/Codigo_municipios_2006.pdf>
+
+##### Heinzen, E., Sinnwell, J., Atkinson, E., Gunderson, T., & Dougherty, G.(2021).*An Arsenal of "R" Functions for Large-Scale Statistical Summaries [R package arsenal version 3.6.3].* Comprehensive R Archive Network (CRAN). Retrieved from <https://cran.r-project.org/package=arsenal>
+
+##### Ministerio de Salud y Protección Social de Colombia. (2020). *ABECÉ. NUEVO CORONAVIRUS (COVID-19)*. [<https://www.minsalud.gov.co/sites/rid/Lists/BibliotecaDigital/RIDE/VS/PP/ET/abece-coronavirus.pdf>](https://www.minsalud.gov.co/sites/rid/Lists/BibliotecaDigital/RIDE/VS/PP/ET/abece-coronavirus.pdf){.uri}
+
+##### Presidencia de la República.(25 de agosto del 2020).Por el cual se imparten instrucciones en virtud de la emergencia sanitaria generada por la pandemia del Coronavirus COVID-19, y el mantenimiento del orden público y se decreta el aislamiento selectivo con distanciamiento individual responsable.[Decreto 1168].Recuperado de <https://dapre.presidencia.gov.co/normativa/normativa/DECRETO%201168%20DEL%2025%20DE%20AGOSTO%20DE%202020.pdf>
+
+##### 
+
+<div/>
